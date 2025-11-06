@@ -1,23 +1,30 @@
+using System;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using System;
+using UnityEngine.UIElements;
 
 public class PlaneMovement : MonoBehaviour
 {
     #region INPUT_FIELDS
     [SerializeField] private InputActionAsset _actionAsset;
     [SerializeField] private Rigidbody _rigidbody;
+    [SerializeField] private UIDocument _document;
 
     private InputActionMap _inputActionMap;
 
     private InputAction _moveAction;
     private InputAction _lookAction;
+    private InputAction _maintainSpeedAction;
 
     public Action<Vector3> OnMove;
     public Action<Vector3> OnLook;
+    public Action OnMaintainSpeedOn;
+    public Action OnMaintainSpeedOff;
 
+    private VisualElement _crossHair;
 
+    private bool _bMaintainSpeed;
     #endregion
 
     #region MONOBEHAVIOUR
@@ -52,6 +59,8 @@ public class PlaneMovement : MonoBehaviour
 
         _moveAction = _inputActionMap.FindAction("Move", throwIfNotFound :true );
         _lookAction = _inputActionMap.FindAction("Look", throwIfNotFound: true);
+        _maintainSpeedAction = _inputActionMap.FindAction("Sprint", throwIfNotFound: true);
+
     }
 
     private void OnEnable()
@@ -59,6 +68,11 @@ public class PlaneMovement : MonoBehaviour
         _inputActionMap.Enable();
         OnMove += PlaneMove;
         OnLook += PlaneLook;
+        OnMaintainSpeedOn += PlaneStartMaintainSpeed;
+        OnMaintainSpeedOff += PlaneStopMaintainSpeed;
+        _maintainSpeedAction.started += StartMaintainSpeed;
+        _maintainSpeedAction.canceled += StopMaintainSpeed;
+        _maintainSpeedAction.Enable();
     }
 
     private void OnDisable()
@@ -67,6 +81,11 @@ public class PlaneMovement : MonoBehaviour
         _inputActionMap.Disable();
         OnMove -= PlaneMove;
         OnLook -= PlaneLook;
+        OnMaintainSpeedOn -= PlaneStartMaintainSpeed;
+        OnMaintainSpeedOff -= PlaneStopMaintainSpeed;
+        _maintainSpeedAction.started -= StartMaintainSpeed;
+        _maintainSpeedAction.canceled -= StopMaintainSpeed;
+        _maintainSpeedAction.Disable();
     }
 
     private void Start()
@@ -87,6 +106,7 @@ public class PlaneMovement : MonoBehaviour
     #endregion
 
     #region PLANE_MOVEMENT
+    // --- Events ---
     private void Move(Vector2 _axisInput)
     {
         OnMove?.Invoke(_axisInput);
@@ -97,17 +117,43 @@ public class PlaneMovement : MonoBehaviour
         OnLook?.Invoke(_axisInput);
     }
 
+    private void StartMaintainSpeed(InputAction.CallbackContext ctx)
+    {
+        OnMaintainSpeedOn?.Invoke();
+    }
+
+    private void StopMaintainSpeed(InputAction.CallbackContext ctx)
+    {
+        OnMaintainSpeedOff?.Invoke();
+    }
+
+
+    // --- Action implementations ---
     private void PlaneMove(Vector3 _handleDirection)
     {
         Vector3 direction = (((_handleDirection.y) * transform.forward) + ((_handleDirection.x) * transform.right)).normalized;
 
         transform.position += direction * Time.deltaTime;
+
+
         Debug.Log("Running");
     }
 
     private void PlaneLook(Vector3 _handleDirection)
     {
+
+
         Debug.Log("Looking");
+    }
+
+    private void PlaneStartMaintainSpeed()
+    {
+        _bMaintainSpeed = true;
+    }
+
+    private void PlaneStopMaintainSpeed()
+    {
+        _bMaintainSpeed = false;
     }
     #endregion
 }
